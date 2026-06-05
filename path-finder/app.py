@@ -16,7 +16,7 @@ from astar import find_shortest_path
 app = Flask(__name__)
 
 with open(
-    "data/data.json",
+    "data/hust_nodes.json",
     "r",
     encoding="utf-8"
 ) as f:
