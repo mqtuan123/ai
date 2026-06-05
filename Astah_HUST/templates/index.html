@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Tìm đường đi ngắn nhất - ĐH Bách Khoa Hà Nội</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f9; padding: 20px; margin: 0; }
+        .container { display: inline-block; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden; }
+        canvas { position: absolute; top: 0; left: 0; cursor: crosshair; }
+        img { display: block; max-width: 100%; height: auto; }
+        .controls { margin-top: 15px; }
+        button { padding: 10px 20px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        #status { margin-top: 10px; font-weight: bold; color: #555; }
+    </style>
+</head>
+<body>
+
+    <h2>BẢN ĐỒ TÌM ĐƯỜNG ĐI NGẮN NHẤT (A*)</h2>
+    <div class="container">
+        <img id="mapImage" src="image_98312c.png" alt="Bản đồ Bách Khoa">
+        <canvas id="mapCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <button onclick="findPath()">Tìm Đường Đi</button>
+        <button onclick="resetMap()" style="background-color: #dc3545;">Xóa Làm Lại</button>
+        <div id="status">Trạng thái: Sẵn sàng. Chờ chọn điểm đi...</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mapCanvas');
+        const ctx = canvas.getContext('2d');
+        const img = document.getElementById('mapImage');
+        const statusText = document.getElementById('status');
+
+        const ORIGINAL_WIDTH = 652;
+        const ORIGINAL_HEIGHT = 470;
+
+        let startPoint = null;
+        let endPoint = null;
+
+        img.onload = syncSize;
+        if (img.complete) { syncSize(); }
+
+        function syncSize() {
+            canvas.width = img.clientWidth;
+            canvas.height = img.clientHeight;
+        }
+
+        canvas.addEventListener('click', function(event) {
+            const rect = canvas.getBoundingClientRect();
+            const displayX = event.clientX - rect.left;
+            const displayY = event.clientY - rect.top;
+
+            const origX = (displayX / canvas.width) * ORIGINAL_WIDTH;
+            const origY = (displayY / canvas.height) * ORIGINAL_HEIGHT;
+
+            if (!startPoint) {
+                startPoint = { x: origX, y: origY, pxX: displayX, pxY: displayY };
+                statusText.innerText = "Trạng thái: Đã chọn điểm đi. Hãy chọn điểm đến...";
+                drawDots();
+            } else if (!endPoint) {
+                endPoint = { x: origX, y: origY, pxX: displayX, pxY: displayY };
+                statusText.innerText = "Trạng thái: Đã chọn xong 2 điểm. Bấm nút 'Tìm Đường Đi'.";
+                drawDots();
+            }
+        });
+
+        function drawDots() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (startPoint) { ctx.beginPath(); ctx.arc(startPoint.pxX, startPoint.pxY, 8, 0, 2 * Math.PI); ctx.fillStyle = '#28a745'; ctx.fill(); }
+            if (endPoint) { ctx.beginPath(); ctx.arc(endPoint.pxX, endPoint.pxY, 8, 0, 2 * Math.PI); ctx.fillStyle = '#dc3545'; ctx.fill(); }
+        }
+
+        async function findPath() {
+            if (!startPoint || !endPoint) { alert("Vui lòng chọn đủ cả điểm đi và điểm đến!"); return; }
+            statusText.innerText = "Trạng thái: Đang tính toán...";
+
+            try {
+                const response = await fetch('/api/find-path', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ start: startPoint, end: endPoint })
+                });
+                const result = await response.json();
+                if (result.status === "success") {
+                    statusText.innerText = "Trạng thái: Đã tìm thấy đường đi!";
+                    drawPath(result.path);
+                }
+            } catch (error) {
+                statusText.innerText = "Trạng thái: Lỗi kết nối server!";
+            }
+        }
+
+        function drawPath(path) {
+            drawDots();
+            ctx.beginPath();
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#007bff';
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            path.forEach((point, index) => {
+                const drawX = (point.x / ORIGINAL_WIDTH) * canvas.width;
+                const drawY = (point.y / ORIGINAL_HEIGHT) * canvas.height;
+                
+                if (index === 0) ctx.moveTo(drawX, drawY);
+                else ctx.lineTo(drawX, drawY);
+            });
+            ctx.stroke();
+        }
+
+        function resetMap() { startPoint = null; endPoint = null; ctx.clearRect(0, 0, canvas.width, canvas.height); statusText.innerText = "Trạng thái: Mời chọn lại..."; }
+        window.addEventListener('resize', syncSize);
+    </script>
+</body>
+</html>
