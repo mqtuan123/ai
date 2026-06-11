@@ -2,7 +2,7 @@ import heapq
 import math
 
 def heuristic(node_coords, target_coords):
-    # Sử dụng khoảng cách Manhattan hoặc Euclid đều được, ở đây dùng Euclid chuẩn phẳng
+    # Dùng Euclid tính khoảng cách
     return math.sqrt((node_coords['x'] - target_coords['x'])**2 + (node_coords['y'] - target_coords['y'])**2)
 
 def a_star_algorithm(graph, start_node, end_node):
